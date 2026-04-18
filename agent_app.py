@@ -1,6 +1,6 @@
 """
 agent_app.py  —  Phase 2 Streamlit UI  —  Agentic Credit Risk Assistant
-Run: streamlit run agent_app.py
+command: streamlit run agent_app.py
 """
 
 import os
@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# ── Page Config ───────────────────────────────────────────────────────────────
+# Page Config 
 st.set_page_config(
     page_title="Credit Risk Agent",
     page_icon="",
@@ -25,7 +25,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ── CSS — same Black/Gold theme as app.py ────────────────────────────────────
+#  CSS 
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
@@ -195,7 +195,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-# ── Data & Model ──────────────────────────────────────────────────────────────
+#  Data & Model 
 @st.cache_data
 def load_cibil():
     path = "./Dataset/Unseen_CIBL_Data.csv"
@@ -213,7 +213,7 @@ RISK_LEVELS = {
 }
 
 
-# ── Session State ─────────────────────────────────────────────────────────────
+#  Session State 
 if "selected_prospect" not in st.session_state:
     st.session_state.selected_prospect = (
         str(cibil_df["PROSPECT_ID"].values[0]) if not cibil_df.empty else "MANUAL_001"
@@ -222,7 +222,7 @@ if "agent_result" not in st.session_state:
     st.session_state.agent_result = None
 
 
-# ── SIDEBAR ───────────────────────────────────────────────────────────────────
+#  SIDEBAR 
 with st.sidebar:
     st.markdown("""
     <div class="sidebar-brand">
@@ -271,7 +271,7 @@ with st.sidebar:
     """, unsafe_allow_html=True)
 
 
-# ── HERO ──────────────────────────────────────────────────────────────────────
+#  HERO 
 st.markdown("""
 <div class="hero-wrapper">
     <div class="hero-title">Agentic Credit Risk <span>Intelligence</span></div>
@@ -282,7 +282,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-# ── TABS ──────────────────────────────────────────────────────────────────────
+#  TABS 
 tab_report, tab_arch = st.tabs(["Risk Analysis", "System Architecture"])
 
 
@@ -347,7 +347,7 @@ with tab_report:
 </div>
 """, unsafe_allow_html=True)
 
-    # ── Feature Input Tabs ─────────────────────────────────────────────────────
+    #  Feature Input Tabs 
     st.markdown('<div class="section-header">Bureau Data Inputs</div>', unsafe_allow_html=True)
 
     ftab1, ftab2, ftab3 = st.tabs(["Enquiry & Trade Lines", "Delinquency & Payments", "Demographics"])
@@ -400,7 +400,7 @@ with tab_report:
         "last_prod_enq2": last_prod, "first_prod_enq2": first_prod,
     }
 
-    # ── Analyze Button ─────────────────────────────────────────────────────────
+    #  Analyze Button 
     st.markdown("<div style='height:2rem'></div>", unsafe_allow_html=True)
     _, btn_col, _ = st.columns([1.5, 2, 1.5])
     with btn_col:
@@ -414,7 +414,7 @@ with tab_report:
                 from graph import run_agent  # lazy import — avoids segfault on Apple Silicon at startup
                 st.session_state.agent_result = run_agent(prospect_id, features)
 
-    # ── Results ────────────────────────────────────────────────────────────────
+    #  Results 
     result = st.session_state.agent_result
 
     if result:
@@ -429,7 +429,7 @@ with tab_report:
             tier = summary.get("risk_tier", "P2")
             lbl, clr, bg, border = RISK_LEVELS.get(tier, RISK_LEVELS["P2"])
 
-            # ── Risk Card ─────────────────────────────────────────────────────
+            #  Risk Card 
             st.markdown(f"""
 <div class="risk-result" style="background:{bg}; border:2px solid {border};">
     <div class="risk-label" style="color:{clr};">{lbl}</div>
@@ -437,7 +437,7 @@ with tab_report:
 </div>
 """, unsafe_allow_html=True)
 
-            # ── Overview ──────────────────────────────────────────────────────
+            #  Overview 
             st.markdown('<div class="section-header">Risk Overview</div>', unsafe_allow_html=True)
             st.markdown(f"""
 <div class="overview-box">
@@ -446,7 +446,7 @@ with tab_report:
 </div>
 """, unsafe_allow_html=True)
 
-            # ── Probability Breakdown ─────────────────────────────────────────
+            #  Probability Breakdown 
             st.markdown('<div class="section-header">Risk Probability Breakdown</div>', unsafe_allow_html=True)
 
             cards_html = '<div class="cards-grid">'
@@ -476,7 +476,7 @@ with tab_report:
             bars_html += "</div>"
             st.markdown(bars_html, unsafe_allow_html=True)
 
-            # ── Deep Dive ─────────────────────────────────────────────────────
+            # Deep Dive 
             st.markdown('<div class="section-header">Deep Dive Analysis</div>', unsafe_allow_html=True)
 
             col_left, col_right = st.columns(2, gap="large")
@@ -517,7 +517,7 @@ with tab_report:
                 for ref in deep_dive.get("guideline_references", []):
                     st.markdown(f'<div class="guideline-ref">{ref}</div>', unsafe_allow_html=True)
 
-            # ── Retrieved Chunks ──────────────────────────────────────────────
+            # Retrieved Chunks 
             with st.expander("Retrieved Knowledge Base Chunks"):
                 chunks = result.get("retrieved_chunks", [])
                 if chunks:
