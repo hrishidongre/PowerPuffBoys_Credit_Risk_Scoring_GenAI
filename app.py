@@ -329,7 +329,7 @@ def load_model():
 
 cibil_df = load_cibil()
 model = load_model()
-FEATURES = list(model.feature_names_in_)
+FEATURES = joblib.load("./models/feature_columns.joblib")
 
 
 
@@ -415,7 +415,7 @@ with st.sidebar:
     <div class="sidebar-brand">
         <div class="sidebar-brand-icon">CR</div>
         <div class="sidebar-brand-name">Credit Risk Engine</div>
-        <div class="sidebar-brand-sub">HistGradientBoosting Model</div>
+        <div class="sidebar-brand-sub">LightGBM + SMOTE Model</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -651,6 +651,16 @@ if predict_clicked:
     numeric_cols = input_df.select_dtypes(include=[np.number]).columns
     input_df[numeric_cols] = input_df[numeric_cols].fillna(input_df[numeric_cols].median())
 
+    # Engineered features
+    def _get(col):
+        return input_df[col] if col in input_df.columns else 0
+
+    input_df['delinq_burden']    = _get('num_times_delinquent') * _get('max_delinquency_level')
+    input_df['enq_pressure']     = _get('enq_L3m') / (_get('enq_L12m') + 1)
+    input_df['account_health']   = _get('num_std') / (_get('num_sub') + _get('num_dbt') + _get('num_lss') + 1)
+    input_df['income_stability'] = _get('NETMONTHLYINCOME') * np.log1p(_get('Time_With_Curr_Empr'))
+    input_df['recency_risk']     = 1 / (_get('time_since_recent_deliquency') + 1)
+
     cat_cols = ["MARITALSTATUS", "EDUCATION", "GENDER", "last_prod_enq2", "first_prod_enq2"]
     input_df = pd.get_dummies(
         input_df,
@@ -709,7 +719,7 @@ if predict_clicked:
     # ── Footer ──
     st.markdown("""
     <div class="app-footer">
-        Prediction powered by cost-sensitive HistGradientBoosting classifier<br>
-        Trained on 51,336 records across 87 features
+        Prediction powered by LightGBM + SMOTE classifier<br>
+        Trained on 51,336 records · 80.4% accuracy · 100 features
     </div>
     """, unsafe_allow_html=True)

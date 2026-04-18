@@ -5,7 +5,14 @@
       "Bash(python3:*)",
       "Bash(.venv/bin/python -c ':*)",
       "Bash(.venv/bin/pip install:*)",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "Bash(.venv/bin/pip show:*)",
+      "Bash(pip show:*)",
+      "Bash(\"/Users/vetri/Downloads/Personal_Project/PowerPuffBoys_Credit_Risk_Scoring_GenAI/.venv/bin/python3\" -c \"import pkg_resources; [print\\(p.project_name, p.version\\) for p in pkg_resources.working_set]\")",
+      "Bash(\"/Users/vetri/Downloads/Personal_Project/PowerPuffBoys_Credit_Risk_Scoring_GenAI/.venv/bin/pip\" install:*)",
+      "Bash(\"/Users/vetri/Downloads/Personal_Project/PowerPuffBoys_Credit_Risk_Scoring_GenAI/.venv/bin/python3\" -m pip install streamlit -q)",
+      "Bash(\"/Users/vetri/Downloads/Personal_Project/PowerPuffBoys_Credit_Risk_Scoring_GenAI/.venv/bin/python3\" -m py_compile \"/Users/vetri/Downloads/Personal_Project/PowerPuffBoys_Credit_Risk_Scoring_GenAI/app.py\")",
+      "Bash(\".venv/bin/python3\" -m streamlit run app.py --server.headless false)"
     ]
   }
 }
