@@ -28,11 +28,11 @@ from retriever import retrieve, build_context_string
 
 load_dotenv()  # loads GROQ_API_KEY from .env
 
-# ── Config ────────────────────────────────────────────────────────────────────
+# Config 
 MODEL_PATH    = "models/finalized_model.joblib"
 FEATURES_PATH = "models/feature_columns.joblib"
 GROQ_MODEL    = "llama-3.3-70b-versatile"
-# ──────────────────────────────────────────────────────────────────────────────
+
 
 
 class AgentState(TypedDict):
@@ -46,7 +46,7 @@ class AgentState(TypedDict):
     error:            Optional[str]
 
 
-# ── Globals ───────────────────────────────────────────────────────────────────
+#  Globals
 _model       = None
 _feat_cols   = None
 _groq_client = None
@@ -76,7 +76,7 @@ def _get_groq_client():
     return _groq_client
 
 
-# ── Preprocessing ─────────────────────────────────────────────────────────────
+#  Preprocessing 
 CAT_COLS = ["MARITALSTATUS", "EDUCATION", "GENDER", "last_prod_enq2", "first_prod_enq2"]
 
 DELINQUENCY_COLS = [
@@ -124,7 +124,7 @@ def preprocess_features(raw: dict, train_columns: list[str]) -> pd.DataFrame:
     return df
 
 
-# ── Node 1: Risk Analyzer ─────────────────────────────────────────────────────
+#  Node 1: Risk Analyzer 
 def risk_analyzer(state: AgentState) -> AgentState:
     try:
         model      = _get_model()
@@ -155,7 +155,7 @@ def risk_analyzer(state: AgentState) -> AgentState:
         return {**state, "error": f"risk_analyzer failed: {e}"}
 
 
-# ── Node 2: Guideline Retriever ───────────────────────────────────────────────
+#  Node 2: Guideline Retriever 
 def guideline_retriever(state: AgentState) -> AgentState:
     if state.get("error"):
         return state
@@ -169,7 +169,7 @@ def guideline_retriever(state: AgentState) -> AgentState:
         return {**state, "error": f"guideline_retriever failed: {e}"}
 
 
-# ── Node 3: Report Generator ──────────────────────────────────────────────────
+#  Node 3: Report Generator 
 SYSTEM_PROMPT = """You are a credit risk analyst AI at a bank.
 Your job is to generate a structured risk assessment report for a loan prospect.
 
@@ -252,7 +252,7 @@ Generate the risk assessment report in the JSON schema specified."""
         return {**state, "error": f"report_generator failed: {e}"}
 
 
-# ── Graph ─────────────────────────────────────────────────────────────────────
+#  Graph 
 def build_graph():
     g = StateGraph(AgentState)
     g.add_node("risk_analyzer",       risk_analyzer)
