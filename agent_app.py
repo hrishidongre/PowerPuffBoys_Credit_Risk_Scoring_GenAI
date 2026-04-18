@@ -4,6 +4,11 @@ Run: streamlit run agent_app.py
 """
 
 import os
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["TOKENIZERS_PARALLELISM"] = "false"   # fix segfault with HuggingFace tokenizers on Apple Silicon
+
 import pandas as pd
 import numpy as np
 import streamlit as st
