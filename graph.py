@@ -10,6 +10,8 @@ Flow:
 """
 
 import os
+os.environ.setdefault("OMP_NUM_THREADS", "1")   # fix LightGBM/OpenMP crash on Python 3.12 + Apple Silicon
+
 import json
 import joblib
 import numpy as np
