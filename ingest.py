@@ -4,21 +4,21 @@ ingest.py
 Build the ChromaDB vector store from RAG_Docs/ (PDFs and text files).
 
 Run ONCE from the project root:
-    python ingest.py
+command: python ingest.py
 """
 
 import chromadb
 from sentence_transformers import SentenceTransformer
 from pathlib import Path
 
-# ── Config ────────────────────────────────────────────────────────────────────
+#  Config 
 KNOWLEDGE_BASE_DIR = "RAG_Docs"
 CHROMA_DB_DIR      = "chroma_db"
 COLLECTION_NAME    = "credit_risk_guidelines"
 CHUNK_SIZE         = 500
 CHUNK_OVERLAP      = 100
 EMBED_MODEL        = "all-MiniLM-L6-v2"
-# ──────────────────────────────────────────────────────────────────────────────
+
 
 
 def chunk_text(text: str, size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) -> list[str]:
