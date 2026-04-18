@@ -1,7 +1,5 @@
 """
 graph.py
---------
-LangGraph agentic workflow for credit risk analysis.
 
 Flow:
     Node 1 (risk_analyzer)       → LightGBM+SMOTE model, risk tier + top features
@@ -13,7 +11,7 @@ import os
 os.environ.setdefault("OMP_NUM_THREADS", "1")
 os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
 os.environ.setdefault("MKL_NUM_THREADS", "1")
-os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")  # fix HuggingFace tokenizers segfault on Apple Silicon
+os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")  
 
 import json
 import joblib
@@ -26,7 +24,7 @@ from groq import Groq
 
 from retriever import retrieve, build_context_string
 
-load_dotenv()  # loads GROQ_API_KEY from .env
+load_dotenv() 
 
 # Config 
 MODEL_PATH    = "models/finalized_model.joblib"
