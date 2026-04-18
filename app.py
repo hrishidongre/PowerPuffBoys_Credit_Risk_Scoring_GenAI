@@ -8,7 +8,7 @@ import joblib
 
 
 # Page Configuration
-# ──────────────────────────────────────────────────
+
 st.set_page_config(
     page_title="Credit Risk Scoring Engine",
     page_icon="",
@@ -18,7 +18,7 @@ st.set_page_config(
 
 
 # Custom CSS — FinNuvora-inspired Black/Gold Theme
-# ──────────────────────────────────────────────────
+
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
