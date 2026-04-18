@@ -7,41 +7,30 @@ import os
 import sys
 import logging
 
-# --- CRITICAL LOGGING SETUP ---
+# Set logging to WARNING to hide info/debug logs in production
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.WARNING,
     format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.FileHandler("streamlit_debug.log"),
-        logging.StreamHandler(sys.stdout),
-    ],
+    handlers=[logging.StreamHandler(sys.stdout)],
 )
 logger = logging.getLogger(__name__)
-logger.info("Streamlit starting up...")
 
 # CRITICAL FIX FOR APPLE SILICON SEGFAULT:
-# These MUST be set BEFORE any other imports (like pandas or torch)
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
 os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
-os.environ["PYTHONFAULTHANDLER"] = "1"  # Enable faulthandler for segfaults
-os.environ["LGBM_AVOID_FAST_PREDICT"] = "1"  # Fix LightGBM Apple Silicon Segfault
-
-import faulthandler
-
-faulthandler.enable()  # Print stack trace on segfaults
-logger.info("Faulthandler enabled")
+os.environ["LGBM_AVOID_FAST_PREDICT"] = "1"
 
 import pandas as pd
 import numpy as np
 import streamlit as st
 from dotenv import load_dotenv
 
-logger.info("Base imports completed")
 load_dotenv()
+
 
 # Page Config
 st.set_page_config(
@@ -227,11 +216,9 @@ st.markdown(
 #  Data & Model
 @st.cache_resource
 def get_agent_runner():
-    logger.info("Initializing Agent Runner (loading heavy models)...")
     try:
         from graph import run_agent
 
-        logger.info("Agent Runner loaded successfully")
         return run_agent
     except Exception as e:
         logger.exception("Failed to load Agent Runner!")
@@ -240,13 +227,9 @@ def get_agent_runner():
 
 @st.cache_data
 def load_cibil():
-    logger.info("Loading CIBIL data...")
     path = "./Dataset/Unseen_CIBL_Data.csv"
     if os.path.exists(path):
-        df = pd.read_csv(path)
-        logger.info(f"Loaded CIBIL data: {len(df)} rows")
-        return df
-    logger.warning("CIBIL dataset not found")
+        return pd.read_csv(path)
     return pd.DataFrame()
 
 
