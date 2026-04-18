@@ -1,6 +1,0 @@
-.DS_Store
-.venv/
-.env
-chroma_db/
-__pycache__/
-.claude/
