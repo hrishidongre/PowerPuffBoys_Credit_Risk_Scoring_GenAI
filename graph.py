@@ -8,10 +8,14 @@ Flow:
 """
 
 import os
-os.environ.setdefault("OMP_NUM_THREADS", "1")
-os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
-os.environ.setdefault("MKL_NUM_THREADS", "1")
-os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")  
+
+# Ensure thread safety on Apple Silicon before any heavy imports
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 import json
 import joblib
@@ -24,29 +28,28 @@ from groq import Groq
 
 from retriever import retrieve, build_context_string
 
-load_dotenv() 
+load_dotenv()
 
-# Config 
-MODEL_PATH    = "models/finalized_model.joblib"
+# Config
+MODEL_PATH = "models/finalized_model.joblib"
 FEATURES_PATH = "models/feature_columns.joblib"
-GROQ_MODEL    = "llama-3.3-70b-versatile"
-
+GROQ_MODEL = "llama-3.3-70b-versatile"
 
 
 class AgentState(TypedDict):
-    prospect_id:      str
-    features:         dict
-    risk_tier:        Optional[str]
-    probabilities:    Optional[dict]
+    prospect_id: str
+    features: dict
+    risk_tier: Optional[str]
+    probabilities: Optional[dict]
     top_risk_factors: Optional[list[str]]
     retrieved_chunks: Optional[list[dict]]
-    report:           Optional[dict]
-    error:            Optional[str]
+    report: Optional[dict]
+    error: Optional[str]
 
 
 #  Globals
-_model       = None
-_feat_cols   = None
+_model = None
+_feat_cols = None
 _groq_client = None
 
 
@@ -74,7 +77,7 @@ def _get_groq_client():
     return _groq_client
 
 
-#  Preprocessing 
+#  Preprocessing
 CAT_COLS = ["MARITALSTATUS", "EDUCATION", "GENDER", "last_prod_enq2", "first_prod_enq2"]
 
 DELINQUENCY_COLS = [
@@ -86,7 +89,13 @@ DELINQUENCY_COLS = [
     "max_unsec_exposure_inPct",
 ]
 
-DROP_COLS = ["CC_utilization", "PL_utilization", "Credit_Score", "PROSPECTID", "PROSPECT_ID"]
+DROP_COLS = [
+    "CC_utilization",
+    "PL_utilization",
+    "Credit_Score",
+    "PROSPECTID",
+    "PROSPECT_ID",
+]
 
 
 def _safe(df: pd.DataFrame, col: str):
@@ -106,13 +115,17 @@ def preprocess_features(raw: dict, train_columns: list[str]) -> pd.DataFrame:
     df[num_cols] = df[num_cols].fillna(0)
 
     # Engineered features — must match training pipeline
-    df["delinq_burden"]    = _safe(df, "num_times_delinquent") * _safe(df, "max_delinquency_level")
-    df["enq_pressure"]     = _safe(df, "enq_L3m") / (_safe(df, "enq_L12m") + 1)
-    df["account_health"]   = _safe(df, "num_std") / (
+    df["delinq_burden"] = _safe(df, "num_times_delinquent") * _safe(
+        df, "max_delinquency_level"
+    )
+    df["enq_pressure"] = _safe(df, "enq_L3m") / (_safe(df, "enq_L12m") + 1)
+    df["account_health"] = _safe(df, "num_std") / (
         _safe(df, "num_sub") + _safe(df, "num_dbt") + _safe(df, "num_lss") + 1
     )
-    df["income_stability"] = _safe(df, "NETMONTHLYINCOME") * np.log1p(_safe(df, "Time_With_Curr_Empr"))
-    df["recency_risk"]     = 1 / (_safe(df, "time_since_recent_deliquency") + 1)
+    df["income_stability"] = _safe(df, "NETMONTHLYINCOME") * np.log1p(
+        _safe(df, "Time_With_Curr_Empr")
+    )
+    df["recency_risk"] = 1 / (_safe(df, "time_since_recent_deliquency") + 1)
 
     present_cats = [c for c in CAT_COLS if c in df.columns]
     if present_cats:
@@ -122,38 +135,63 @@ def preprocess_features(raw: dict, train_columns: list[str]) -> pd.DataFrame:
     return df
 
 
-#  Node 1: Risk Analyzer 
+#  Node 1: Risk Analyzer
 def risk_analyzer(state: AgentState) -> AgentState:
     try:
-        model      = _get_model()
+        model = _get_model()
         train_cols = _get_feat_cols()
-        X          = preprocess_features(state["features"], train_cols)
+        X = preprocess_features(state["features"], train_cols)
 
-        pred  = model.predict(X)[0]
-        proba = model.predict_proba(X)[0]
-        tier  = {0: "P1", 1: "P2", 2: "P3", 3: "P4"}.get(int(pred), str(pred))
-        probs = {f"P{i+1}": round(float(proba[i]), 3) for i in range(4)}
+        # TOTAL BYPASS FOR APPLE SILICON CRASH:
+        # We will use the model's Booster directly to skip the buggy C++ predict_np2d
+        # path and use the thread-safe array-based path.
+        X_np = X.to_numpy().astype(np.float32)
+
+        # Use Booster.predict which is the lowest-level stable API
+        booster = model.booster_
+        proba = booster.predict(X_np)[0]
+
+        # In case it returns single value (unlikely for 4 classes, but safe-coding)
+        if isinstance(proba, (float, np.float32, np.float64)):
+            # Handle binary case if it ever happens
+            proba = [1 - proba, proba]
+
+        pred = np.argmax(proba)
+
+        tier = {0: "P1", 1: "P2", 2: "P3", 3: "P4"}.get(int(pred), str(pred))
+        probs = {f"P{i + 1}": round(float(proba[i]), 3) for i in range(4)}
 
         top_factors = []
+        # Accessing feature_importances_ is safe
         if hasattr(model, "feature_importances_"):
             feat_series = pd.Series(model.feature_importances_, index=train_cols)
             for feat, imp in feat_series.nlargest(5).items():
                 val = state["features"].get(feat, "N/A")
                 top_factors.append(f"{feat} = {val}  (importance: {imp:.3f})")
         else:
-            for f in ["enq_L3m", "Age_Oldest_TL", "time_since_recent_deliquency",
-                      "num_std_12mts", "Tot_Missed_Pmnt"]:
+            for f in [
+                "enq_L3m",
+                "Age_Oldest_TL",
+                "time_since_recent_deliquency",
+                "num_std_12mts",
+                "Tot_Missed_Pmnt",
+            ]:
                 if f in state["features"]:
                     top_factors.append(f"{f} = {state['features'][f]}")
 
-        return {**state, "risk_tier": tier, "probabilities": probs,
-                "top_risk_factors": top_factors, "error": None}
+        return {
+            **state,
+            "risk_tier": tier,
+            "probabilities": probs,
+            "top_risk_factors": top_factors,
+            "error": None,
+        }
 
     except Exception as e:
         return {**state, "error": f"risk_analyzer failed: {e}"}
 
 
-#  Node 2: Guideline Retriever 
+#  Node 2: Guideline Retriever
 def guideline_retriever(state: AgentState) -> AgentState:
     if state.get("error"):
         return state
@@ -167,7 +205,7 @@ def guideline_retriever(state: AgentState) -> AgentState:
         return {**state, "error": f"guideline_retriever failed: {e}"}
 
 
-#  Node 3: Report Generator 
+#  Node 3: Report Generator
 SYSTEM_PROMPT = """You are a credit risk analyst AI at a bank.
 Your job is to generate a structured risk assessment report for a loan prospect.
 
@@ -204,19 +242,19 @@ def report_generator(state: AgentState) -> AgentState:
 
     raw_text = ""
     try:
-        client  = _get_groq_client()
+        client = _get_groq_client()
         context = build_context_string(state.get("retrieved_chunks", []))
-        tier    = state["risk_tier"]
-        probs   = state["probabilities"]
+        tier = state["risk_tier"]
+        probs = state["probabilities"]
         factors = state.get("top_risk_factors", [])
         severity_map = {"P1": "Very Low", "P2": "Low", "P3": "Medium", "P4": "High"}
 
-        user_message = f"""Prospect ID: {state['prospect_id']}
-Risk Tier: {tier} ({severity_map.get(tier, 'Unknown')} Risk)
+        user_message = f"""Prospect ID: {state["prospect_id"]}
+Risk Tier: {tier} ({severity_map.get(tier, "Unknown")} Risk)
 Model Probabilities: {json.dumps(probs)}
 
 Top Risk Factors from ML Model:
-{chr(10).join(f'- {f}' for f in factors)}
+{chr(10).join(f"- {f}" for f in factors)}
 
 RETRIEVED GUIDELINES (use ONLY these for recommendations):
 {context}
@@ -227,7 +265,7 @@ Generate the risk assessment report in the JSON schema specified."""
             model=GROQ_MODEL,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user",   "content": user_message},
+                {"role": "user", "content": user_message},
             ],
             temperature=0.1,
             max_tokens=1200,
@@ -245,21 +283,24 @@ Generate the risk assessment report in the JSON schema specified."""
         return {**state, "report": report}
 
     except json.JSONDecodeError as e:
-        return {**state, "error": f"LLM returned invalid JSON: {e}\nRaw: {raw_text[:300]}"}
+        return {
+            **state,
+            "error": f"LLM returned invalid JSON: {e}\nRaw: {raw_text[:300]}",
+        }
     except Exception as e:
         return {**state, "error": f"report_generator failed: {e}"}
 
 
-#  Graph 
+#  Graph
 def build_graph():
     g = StateGraph(AgentState)
-    g.add_node("risk_analyzer",       risk_analyzer)
+    g.add_node("risk_analyzer", risk_analyzer)
     g.add_node("guideline_retriever", guideline_retriever)
-    g.add_node("report_generator",    report_generator)
+    g.add_node("report_generator", report_generator)
     g.set_entry_point("risk_analyzer")
-    g.add_edge("risk_analyzer",       "guideline_retriever")
+    g.add_edge("risk_analyzer", "guideline_retriever")
     g.add_edge("guideline_retriever", "report_generator")
-    g.add_edge("report_generator",    END)
+    g.add_edge("report_generator", END)
     return g.compile()
 
 
@@ -272,13 +313,15 @@ def run_agent(prospect_id: str, features: dict) -> dict:
     if _compiled_graph is None:
         _compiled_graph = build_graph()
 
-    return _compiled_graph.invoke({
-        "prospect_id":      prospect_id,
-        "features":         features,
-        "risk_tier":        None,
-        "probabilities":    None,
-        "top_risk_factors": None,
-        "retrieved_chunks": None,
-        "report":           None,
-        "error":            None,
-    })
+    return _compiled_graph.invoke(
+        {
+            "prospect_id": prospect_id,
+            "features": features,
+            "risk_tier": None,
+            "probabilities": None,
+            "top_risk_factors": None,
+            "retrieved_chunks": None,
+            "report": None,
+            "error": None,
+        }
+    )

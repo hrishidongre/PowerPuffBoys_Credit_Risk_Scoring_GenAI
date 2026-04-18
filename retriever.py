@@ -7,22 +7,27 @@ Uses SentenceTransformer directly for query embedding (query_embeddings instead 
 query_texts) to avoid a hanging issue in ChromaDB 1.x's embedding function wrapper.
 """
 
+import os
 import chromadb
 from sentence_transformers import SentenceTransformer
 
-CHROMA_DB_DIR   = "chroma_db"
+CHROMA_DB_DIR = "chroma_db"
 COLLECTION_NAME = "credit_risk_guidelines"
-EMBED_MODEL     = "all-MiniLM-L6-v2"
-TOP_K           = 4
+EMBED_MODEL = "all-MiniLM-L6-v2"
+TOP_K = 4
 
-_client     = None
+_client = None
 _collection = None
-_st_model   = None
+_st_model = None
 
 
 def _get_model() -> SentenceTransformer:
     global _st_model
     if _st_model is None:
+        os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+        os.environ.setdefault("OMP_NUM_THREADS", "1")
+        os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+        os.environ.setdefault("MKL_NUM_THREADS", "1")
         _st_model = SentenceTransformer(EMBED_MODEL)
     return _st_model
 
@@ -38,7 +43,7 @@ def _get_collection():
 def retrieve(query: str, top_k: int = TOP_K) -> list[dict]:
     """Return top-k guideline chunks for the query."""
     try:
-        model      = _get_model()
+        model = _get_model()
         collection = _get_collection()
 
         # Embed query ourselves — avoids chromadb 1.x embedding_function hang
@@ -47,12 +52,12 @@ def retrieve(query: str, top_k: int = TOP_K) -> list[dict]:
         results = collection.query(
             query_embeddings=q_embedding,
             n_results=top_k,
-            include=["documents", "metadatas", "distances"]
+            include=["documents", "metadatas", "distances"],
         )
         return [
             {
-                "text":     doc,
-                "source":   meta.get("source", "unknown"),
+                "text": doc,
+                "source": meta.get("source", "unknown"),
                 "distance": round(dist, 4),
             }
             for doc, meta, dist in zip(

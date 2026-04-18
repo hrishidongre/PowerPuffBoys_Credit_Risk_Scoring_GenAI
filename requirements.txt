@@ -5,3 +5,8 @@ joblib
 scikit-learn
 lightgbm
 imbalanced-learn
+groq
+langgraph
+chromadb
+sentence-transformers
+python-dotenv
