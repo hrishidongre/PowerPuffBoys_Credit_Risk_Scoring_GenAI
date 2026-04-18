@@ -88,7 +88,7 @@ DELINQUENCY_COLS = [
     "max_unsec_exposure_inPct",
 ]
 
-DROP_COLS = ["CC_utilization", "PL_utilization", "Credit_Score", "PROSPECTID"]
+DROP_COLS = ["CC_utilization", "PL_utilization", "Credit_Score", "PROSPECTID", "PROSPECT_ID"]
 
 
 def _safe(df: pd.DataFrame, col: str):

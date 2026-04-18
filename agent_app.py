@@ -8,12 +8,12 @@ os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["TOKENIZERS_PARALLELISM"] = "false"   # fix segfault with HuggingFace tokenizers on Apple Silicon
+os.environ["TRANSFORMERS_VERBOSITY"] = "error"   # suppress __path__ warnings from transformers 4.50+
 
 import pandas as pd
 import numpy as np
 import streamlit as st
 from dotenv import load_dotenv
-from graph import run_agent
 
 load_dotenv()
 
@@ -411,6 +411,7 @@ with tab_report:
             st.error("GROQ_API_KEY not found. Add it to your .env file and restart the app.")
         else:
             with st.spinner("Running agent  —  Risk Analysis  >  Guideline Retrieval  >  Report Generation  (approx 10s)"):
+                from graph import run_agent  # lazy import — avoids segfault on Apple Silicon at startup
                 st.session_state.agent_result = run_agent(prospect_id, features)
 
     # ── Results ────────────────────────────────────────────────────────────────
