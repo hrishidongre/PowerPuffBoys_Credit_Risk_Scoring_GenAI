@@ -6,6 +6,19 @@ command: streamlit run agent_app.py
 import os
 import sys
 import logging
+import pandas as pd
+import numpy as np
+import streamlit as st
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Page Config - MUST BE FIRST STREAMLIT CALL
+st.set_page_config(
+    page_title="Credit Risk Agent",
+    page_icon="🏦",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 
 # Set logging to WARNING to hide info/debug logs in production
 logging.basicConfig(
@@ -15,7 +28,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# CRITICAL FIX FOR APPLE SILICON SEGFAULT:
+# CRITICAL FIX FOR THREADING/SEGFAULT (Especially Apple Silicon and Cloud Runtimes):
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
@@ -24,13 +37,9 @@ os.environ["NUMEXPR_NUM_THREADS"] = "1"
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 os.environ["LGBM_AVOID_FAST_PREDICT"] = "1"
 
-import pandas as pd
-import numpy as np
-import streamlit as st
-from dotenv import load_dotenv
-
 load_dotenv()
 
+# Secrets check (after set_page_config)
 try:
     if not os.environ.get("GROQ_API_KEY") and "GROQ_API_KEY" in st.secrets:
         os.environ["GROQ_API_KEY"] = st.secrets["GROQ_API_KEY"]
@@ -47,7 +56,6 @@ def safe_int(value, default=0):
         return default
 
 
-
 def safe_float(value, default=0.0):
     try:
         if pd.isna(value):
@@ -56,14 +64,6 @@ def safe_float(value, default=0.0):
     except Exception:
         return default
 
-
-# Page Config
-st.set_page_config(
-    page_title="Credit Risk Agent",
-    page_icon="",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
 
 #  CSS
 st.markdown(
