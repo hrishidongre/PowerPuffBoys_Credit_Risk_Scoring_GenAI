@@ -53,6 +53,13 @@ _feat_cols = None
 _groq_client = None
 
 
+def _truncate(text: str, limit: int = 180) -> str:
+    text = " ".join(str(text or "").split())
+    if len(text) <= limit:
+        return text
+    return text[: limit - 3].rstrip() + "..."
+
+
 def _get_model():
     global _model
     if _model is None:
@@ -72,9 +79,90 @@ def _get_groq_client():
     if _groq_client is None:
         api_key = os.environ.get("GROQ_API_KEY", "")
         if not api_key:
-            raise ValueError("GROQ_API_KEY not set. Add it to your .env file.")
+            raise ValueError("GROQ_API_KEY not set. Falling back to local report generation.")
         _groq_client = Groq(api_key=api_key)
     return _groq_client
+
+
+
+def _build_fallback_report(state: AgentState, note: Optional[str] = None) -> dict:
+    """Resilient non-LLM report so the Streamlit app remains deployable and usable."""
+    prospect_id = state.get("prospect_id", "UNKNOWN")
+    tier = state.get("risk_tier") or "P2"
+    probs = state.get("probabilities") or {"P1": 0.0, "P2": 0.0, "P3": 0.0, "P4": 0.0}
+    chunks = state.get("retrieved_chunks") or []
+    factors = (state.get("top_risk_factors") or ["No significant model factors available."])[:3]
+
+    severity_map = {"P1": "Very Low", "P2": "Low", "P3": "Medium", "P4": "High"}
+    highest_band = max(probs, key=probs.get) if probs else tier
+
+    recommendation_map = {
+        "P1": "Recommendation: Proceed with standard underwriting checks.",
+        "P2": "Recommendation: Proceed with normal review and verify current income and obligations.",
+        "P3": "Recommendation: Escalate for analyst review before approval and validate recent repayment behavior.",
+        "P4": "Recommendation: Apply tight underwriting controls or decline unless strong compensating factors are documented.",
+    }
+    action_map = {
+        "P1": [
+            "Complete standard KYC and bureau verification.",
+            "Confirm current employment and income continuity.",
+            "Monitor exposure limits before sanction.",
+        ],
+        "P2": [
+            "Verify declared income and existing repayment burden.",
+            "Review recent enquiries and any fresh credit lines.",
+            "Approve within standard policy limits if checks remain clean.",
+        ],
+        "P3": [
+            "Review bank statements and repayment discipline for the last 6–12 months.",
+            "Ask for additional income or collateral support where policy permits.",
+            "Route the file to manual credit review before final decision.",
+        ],
+        "P4": [
+            "Investigate delinquencies and overdue patterns in detail.",
+            "Require senior credit approval and strong mitigants if the case is pursued.",
+            "Consider decline when repayment stress cannot be reasonably explained.",
+        ],
+    }
+
+    guideline_references = []
+    for chunk in chunks[:3]:
+        src = chunk.get("source", "unknown")
+        txt = _truncate(chunk.get("text", ""))
+        if txt:
+            guideline_references.append(f"{src}: {txt}")
+    if not guideline_references:
+        guideline_references = ["Insufficient guideline context."]
+
+    factor_explanations = [
+        f"The model identified {factor} as a meaningful contributor to the current risk assessment."
+        for factor in factors
+    ]
+
+    overview = (
+        f"Prospect {prospect_id} is assessed as {tier} ({severity_map.get(tier, 'Unknown')}). "
+        f"The model assigns its highest confidence to {highest_band} at {round(float(probs.get(highest_band, 0.0)) * 100, 1)}%. "
+        f"Retrieved policy context was used to keep the recommendation grounded in the available guidance."
+    )
+    if note:
+        overview += f" {note}"
+
+    return {
+        "summary": {
+            "prospect_id": prospect_id,
+            "risk_tier": tier,
+            "severity": severity_map.get(tier, "Low"),
+            "recommendation": recommendation_map.get(tier, recommendation_map["P2"]),
+            "overview": overview,
+        },
+        "deep_dive": {
+            "top_risk_factors": factors,
+            "factor_explanations": factor_explanations,
+            "guideline_references": guideline_references,
+            "suggested_actions": action_map.get(tier, action_map["P2"]),
+        },
+        "confidence": probs,
+    }
 
 
 #  Preprocessing
@@ -280,15 +368,20 @@ Generate the risk assessment report in the JSON schema specified."""
 
         report = json.loads(raw_text)
         report["confidence"] = probs  # always use model probs, not LLM's
-        return {**state, "report": report}
+        return {**state, "report": report, "error": None}
 
-    except json.JSONDecodeError as e:
-        return {
-            **state,
-            "error": f"LLM returned invalid JSON: {e}\nRaw: {raw_text[:300]}",
-        }
+    except json.JSONDecodeError:
+        fallback = _build_fallback_report(
+            state,
+            note="The hosted LLM response could not be parsed, so a local structured fallback report was generated.",
+        )
+        return {**state, "report": fallback, "error": None}
     except Exception as e:
-        return {**state, "error": f"report_generator failed: {e}"}
+        fallback = _build_fallback_report(
+            state,
+            note=f"The hosted LLM was unavailable ({e}), so a local structured fallback report was generated.",
+        )
+        return {**state, "report": fallback, "error": None}
 
 
 #  Graph

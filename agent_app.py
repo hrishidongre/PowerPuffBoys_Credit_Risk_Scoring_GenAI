@@ -31,6 +31,31 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+try:
+    if not os.environ.get("GROQ_API_KEY") and "GROQ_API_KEY" in st.secrets:
+        os.environ["GROQ_API_KEY"] = st.secrets["GROQ_API_KEY"]
+except Exception:
+    pass
+
+
+def safe_int(value, default=0):
+    try:
+        if pd.isna(value):
+            return default
+        return int(float(value))
+    except Exception:
+        return default
+
+
+
+def safe_float(value, default=0.0):
+    try:
+        if pd.isna(value):
+            return default
+        return float(value)
+    except Exception:
+        return default
+
 
 # Page Config
 st.set_page_config(
@@ -366,25 +391,25 @@ with tab_report:
     </div>
     <div class="metric-card">
         <div class="metric-label">Monthly Income</div>
-        <div class="metric-value">Rs. {int(prefill.get("NETMONTHLYINCOME", 0)):,}</div>
+        <div class="metric-value">Rs. {safe_int(prefill.get("NETMONTHLYINCOME", 0)):,}</div>
     </div>
 </div>
 <div class="cards-grid">
     <div class="metric-card">
         <div class="metric-label">Enquiries (3 Mo)</div>
-        <div class="metric-value">{int(prefill.get("enq_L3m", 0))}</div>
+        <div class="metric-value">{safe_int(prefill.get("enq_L3m", 0))}</div>
     </div>
     <div class="metric-card">
         <div class="metric-label">Missed Payments</div>
-        <div class="metric-value">{int(prefill.get("Tot_Missed_Pmnt", 0))}</div>
+        <div class="metric-value">{safe_int(prefill.get("Tot_Missed_Pmnt", 0))}</div>
     </div>
     <div class="metric-card">
         <div class="metric-label">Oldest Account</div>
-        <div class="metric-value">{int(prefill.get("Age_Oldest_TL", 0))} mo</div>
+        <div class="metric-value">{safe_int(prefill.get("Age_Oldest_TL", 0))} mo</div>
     </div>
     <div class="metric-card">
         <div class="metric-label">Total Trade Lines</div>
-        <div class="metric-value">{int(prefill.get("Total_TL", 0))}</div>
+        <div class="metric-value">{safe_int(prefill.get("Total_TL", 0))}</div>
     </div>
 </div>
 """,
@@ -405,47 +430,47 @@ with tab_report:
         with c1:
             enq_l3m = st.number_input(
                 "Enquiries — Last 3 Months",
-                value=int(prefill.get("enq_L3m", 3)),
+                value=safe_int(prefill.get("enq_L3m", 3), 3),
                 min_value=0,
             )
             enq_l6m = st.number_input(
                 "Enquiries — Last 6 Months",
-                value=int(prefill.get("enq_L6m", 5)),
+                value=safe_int(prefill.get("enq_L6m", 5), 5),
                 min_value=0,
             )
             enq_l12m = st.number_input(
                 "Enquiries — Last 12 Months",
-                value=int(prefill.get("enq_L12m", 7)),
+                value=safe_int(prefill.get("enq_L12m", 7), 7),
                 min_value=0,
             )
         with c2:
             age_oldest = st.number_input(
                 "Oldest Account (months)",
-                value=int(prefill.get("Age_Oldest_TL", 36)),
+                value=safe_int(prefill.get("Age_Oldest_TL", 36), 36),
                 min_value=0,
             )
             age_newest = st.number_input(
                 "Newest Account (months)",
-                value=int(prefill.get("Age_Newest_TL", 6)),
+                value=safe_int(prefill.get("Age_Newest_TL", 6), 6),
                 min_value=0,
             )
             tot_tl = st.number_input(
-                "Total Trade Lines", value=int(prefill.get("Total_TL", 5)), min_value=0
+                "Total Trade Lines", value=safe_int(prefill.get("Total_TL", 5), 5), min_value=0
             )
         with c3:
             num_std = st.number_input(
                 "Standard Payments (total)",
-                value=int(prefill.get("num_std", 10)),
+                value=safe_int(prefill.get("num_std", 10), 10),
                 min_value=0,
             )
             num_std_12mts = st.number_input(
                 "Standard Payments (12 months)",
-                value=int(prefill.get("num_std_12mts", 8)),
+                value=safe_int(prefill.get("num_std_12mts", 8), 8),
                 min_value=0,
             )
             tot_missed = st.number_input(
                 "Total Missed Payments",
-                value=int(prefill.get("Tot_Missed_Pmnt", 0)),
+                value=safe_int(prefill.get("Tot_Missed_Pmnt", 0), 0),
                 min_value=0,
             )
 
@@ -454,23 +479,23 @@ with tab_report:
         with c1:
             time_recent = st.number_input(
                 "Time Since Recent Delinquency (months)",
-                value=float(prefill.get("time_since_recent_deliquency", 0)),
+                value=safe_float(prefill.get("time_since_recent_deliquency", 0), 0.0),
                 min_value=0.0,
             )
             time_first = st.number_input(
                 "Time Since First Delinquency (months)",
-                value=float(prefill.get("time_since_first_deliquency", 0)),
+                value=safe_float(prefill.get("time_since_first_deliquency", 0), 0.0),
                 min_value=0.0,
             )
         with c2:
             max_deliq = st.number_input(
                 "Max Delinquency Level (12 months)",
-                value=int(prefill.get("max_deliq_12mts", 0)),
+                value=safe_int(prefill.get("max_deliq_12mts", 0), 0),
                 min_value=0,
             )
             num_deliq = st.number_input(
                 "Times Delinquent (12 months)",
-                value=int(prefill.get("num_deliq_12mts", 0)),
+                value=safe_int(prefill.get("num_deliq_12mts", 0), 0),
                 min_value=0,
             )
 
@@ -478,11 +503,11 @@ with tab_report:
         c1, c2, c3 = st.columns(3, gap="large")
         with c1:
             age = st.number_input(
-                "Age", value=int(prefill.get("AGE", 30)), min_value=18, max_value=80
+                "Age", value=safe_int(prefill.get("AGE", 30), 30), min_value=18, max_value=80
             )
             income = st.number_input(
                 "Net Monthly Income",
-                value=float(prefill.get("NETMONTHLYINCOME", 40000.0)),
+                value=safe_float(prefill.get("NETMONTHLYINCOME", 40000.0), 40000.0),
                 min_value=0.0,
             )
         with c2:
@@ -543,24 +568,17 @@ with tab_report:
         )
 
     if analyze_clicked:
-        if not os.environ.get("GROQ_API_KEY"):
+        try:
+            with st.spinner(
+                "Running agent  —  Risk Analysis  >  Guideline Retrieval  >  Report Generation  (approx 10s) \n Might take longer on first run!"
+            ):
+                run_agent_cached = get_agent_runner()
+                st.session_state.agent_result = run_agent_cached(prospect_id, features)
+        except Exception as e:
+            st.session_state.agent_result = {"error": f"Agent failed to start: {e}"}
             st.error(
-                "GROQ_API_KEY not found. Add it to your .env file and restart the app."
+                "Agent failed to start. Check terminal logs for dependency or model errors."
             )
-        else:
-            try:
-                with st.spinner(
-                    "Running agent  —  Risk Analysis  >  Guideline Retrieval  >  Report Generation  (approx 10s)"
-                ):
-                    run_agent_cached = get_agent_runner()
-                    st.session_state.agent_result = run_agent_cached(
-                        prospect_id, features
-                    )
-            except Exception as e:
-                st.session_state.agent_result = {"error": f"Agent failed to start: {e}"}
-                st.error(
-                    "Agent failed to start. Check terminal logs for dependency or model errors."
-                )
 
     #  Results
     result = st.session_state.agent_result

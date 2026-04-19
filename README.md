@@ -9,6 +9,21 @@ This project implements an **AI-driven credit risk classification system** that 
 - **Milestone 1:** End-to-end ML pipeline -- data merging, cleaning, EDA, and multi-class classification using Decision Trees, Random Forests, and Gradient Boosting. Deliberate exclusion of Credit Score to force the model to learn from behavioral features.
 
 - Deployed Link : https://powerpuffboys-crs.streamlit.app/
+
+### Phase 2 Agentic App
+
+This repository now ships with a single deploy-friendly Streamlit entrypoint:
+
+- `app.py` → primary Streamlit entrypoint for local/cloud deployment
+- `agent_app.py` → full UI implementation
+- `graph.py` → LangGraph workflow (risk analysis → retrieval → report generation)
+- `retriever.py` → RAG retrieval over local RBI/SEBI/PDF guidance
+
+Deployment-oriented improvements:
+- automatic ChromaDB build on first run from `RAG_Docs/`
+- optional `GROQ_API_KEY` via `.env` or Streamlit secrets
+- graceful local fallback report if the LLM/API is unavailable
+- Streamlit Cloud-ready `requirements.txt`, `runtime.txt`, and `.streamlit/config.toml`
 ---
 
 ### Technology Stack
@@ -240,6 +255,16 @@ source .venv/bin/activate        # macOS / Linux
 pip install -r requirements.txt
 ```
 
+#### Optional API Key Setup
+
+Create a `.env` file in the project root if you want Groq-powered report generation:
+
+```env
+GROQ_API_KEY=your_groq_api_key_here
+```
+
+If no API key is provided, the app still runs and generates a structured local fallback report.
+
 #### Run the App
 
 ```bash
@@ -247,6 +272,16 @@ streamlit run app.py
 ```
 
 Opens at `http://localhost:8501`.
+
+On first launch, the app auto-builds the ChromaDB vector store from files inside `RAG_Docs/`, so you do not need to run `python ingest.py` separately for deployment.
+
+#### Streamlit Cloud Deployment
+
+1. Push this repository to GitHub.
+2. Create a new app on Streamlit Cloud.
+3. Set the main file path to `app.py`.
+4. Add `GROQ_API_KEY` in Streamlit secrets if you want LLM-generated reports.
+5. Deploy — the knowledge base is initialized automatically on first run.
 
 #### Reproduce the Pipeline
 
@@ -264,7 +299,10 @@ Run all cells sequentially to reproduce data loading, merging, cleaning, EDA, mo
 | :--- | :--- |
 | **ML Pipeline** | `Credit Risk Prediction.ipynb` |
 | **Trained Model** | `models/finalized_model.joblib` |
-| **Web Application** | `app.py` |
+| **Web Application** | `app.py` (deploy entrypoint) |
+| **Agentic UI** | `agent_app.py` |
+| **Workflow Orchestration** | `graph.py` |
+| **RAG Retrieval** | `retriever.py` |
 | **Data Dictionary** | `Dataset/schema.md` |
 | **Datasets** | `Dataset/` |
 

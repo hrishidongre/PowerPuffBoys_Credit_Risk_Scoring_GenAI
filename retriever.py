@@ -13,6 +13,7 @@ from sentence_transformers import SentenceTransformer
 
 CHROMA_DB_DIR = "chroma_db"
 COLLECTION_NAME = "credit_risk_guidelines"
+KNOWLEDGE_BASE_DIR = "RAG_Docs"
 EMBED_MODEL = "all-MiniLM-L6-v2"
 TOP_K = 4
 
@@ -32,11 +33,30 @@ def _get_model() -> SentenceTransformer:
     return _st_model
 
 
+def _bootstrap_vector_store() -> None:
+    """Build the Chroma collection on first run so Streamlit deploys need no manual ingest step."""
+    from ingest import build_vector_store, load_documents
+
+    docs = load_documents(KNOWLEDGE_BASE_DIR)
+    if not docs:
+        raise FileNotFoundError(
+            f"No RAG documents found in '{KNOWLEDGE_BASE_DIR}'."
+        )
+    build_vector_store(docs)
+
+
+
 def _get_collection():
     global _client, _collection
     if _collection is None:
         _client = chromadb.PersistentClient(path=CHROMA_DB_DIR)
-        _collection = _client.get_collection(name=COLLECTION_NAME)
+        try:
+            _collection = _client.get_collection(name=COLLECTION_NAME)
+        except Exception:
+            print("[i] Chroma collection missing. Building vector store from RAG_Docs/...")
+            _bootstrap_vector_store()
+            _client = chromadb.PersistentClient(path=CHROMA_DB_DIR)
+            _collection = _client.get_collection(name=COLLECTION_NAME)
     return _collection
 
 
