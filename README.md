@@ -47,7 +47,7 @@ PowerPuffBoys_Credit_Risk_Scoring_GenAI/
 |
 |-- Credit Risk Prediction.ipynb    # Full ML pipeline: EDA, cleaning, 3 models, evaluation
 |-- app.py                          # Streamlit app for real-time risk prediction
-|-- requirements.txt                # Python dependencies
+|-- pyproject.toml                  # uv dependency management
 |
 |-- Dataset/
 |   |-- Internal_Bank_Dataset.xlsx  # 25 trade line features per prospect
@@ -240,7 +240,7 @@ The web app (`app.py`) serves as the end-user interface for bank officers.
 
 #### Prerequisites
 
-- Python 3.9+
+- [uv](https://docs.astral.sh/uv/getting-started/installation/)
 
 #### Installation
 
@@ -248,11 +248,8 @@ The web app (`app.py`) serves as the end-user interface for bank officers.
 git clone https://github.com/adithyanst/PowerPuffBoys_Credit_Risk_Scoring_GenAI.git
 cd PowerPuffBoys_Credit_Risk_Scoring_GenAI
 
-python -m venv .venv
-source .venv/bin/activate        # macOS / Linux
-# .venv\Scripts\activate         # Windows
-
-pip install -r requirements.txt
+# uv will automatically create a virtual environment and install dependencies
+uv sync
 ```
 
 #### Optional API Key Setup
@@ -268,12 +265,12 @@ If no API key is provided, the app still runs and generates a structured local f
 #### Run the App
 
 ```bash
-streamlit run app.py
+uv run streamlit run app.py
 ```
 
 Opens at `http://localhost:8501`.
 
-On first launch, the app auto-builds the ChromaDB vector store from files inside `RAG_Docs/`, so you do not need to run `python ingest.py` separately for deployment.
+On first launch, the app auto-builds the ChromaDB vector store from files inside `RAG_Docs/`, so you do not need to run `uv run python ingest.py` separately for deployment.
 
 #### Streamlit Cloud Deployment
 
@@ -299,6 +296,7 @@ Run all cells sequentially to reproduce data loading, merging, cleaning, EDA, mo
 | :--- | :--- |
 | **ML Pipeline** | `Credit Risk Prediction.ipynb` |
 | **Trained Model** | `models/finalized_model.joblib` |
+| **Dependency Management** | `pyproject.toml` / `uv.lock` |
 | **Web Application** | `app.py` (deploy entrypoint) |
 | **Agentic UI** | `agent_app.py` |
 | **Workflow Orchestration** | `graph.py` |
