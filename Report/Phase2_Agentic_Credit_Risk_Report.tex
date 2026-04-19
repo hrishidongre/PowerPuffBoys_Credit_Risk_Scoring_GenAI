@@ -1,0 +1,680 @@
+\documentclass[12pt,a4paper]{article}
+
+% ── Packages ──
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{setspace}
+\usepackage{tcolorbox}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{tocloft}
+\usepackage{parskip}
+
+% ── Colors ──
+\definecolor{titleblue}{RGB}{30,58,138}
+\definecolor{sectionblue}{RGB}{37,99,235}
+\definecolor{linkblue}{RGB}{59,130,246}
+\definecolor{nodegold}{RGB}{180,120,0}
+\definecolor{nodegreen}{RGB}{22,101,52}
+\definecolor{nodebox}{RGB}{240,245,255}
+\definecolor{successbox}{RGB}{240,253,244}
+
+% ── Hyperref Setup ──
+\hypersetup{
+    colorlinks=true,
+    linkcolor=sectionblue,
+    urlcolor=linkblue,
+    citecolor=sectionblue,
+    pdftitle={Agentic Credit Risk Intelligence Engine -- Milestone 2 Report},
+    pdfauthor={Team PowerPuff Boys}
+}
+
+% ── Section Styling ──
+\titleformat{\section}
+    {\Large\bfseries\color{titleblue}}
+    {\thesection.}{0.5em}{}
+\titleformat{\subsection}
+    {\large\bfseries\color{sectionblue}}
+    {\thesubsection}{0.5em}{}
+\titleformat{\subsubsection}
+    {\normalsize\bfseries\color{sectionblue}}
+    {\thesubsubsection}{0.5em}{}
+
+% ── Header / Footer ──
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textit{Agentic Credit Risk Intelligence Engine}}
+\fancyhead[R]{\small\textit{Team PowerPuff Boys}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ── Spacing ──
+\setstretch{1.25}
+
+% ── TOC: compact single-page layout ──
+\renewcommand{\cftsecdotsep}{\cftdotsep}
+\renewcommand{\cftsecleader}{\cftdotfill{\cftsecdotsep}}
+\setlength{\cftbeforetoctitleskip}{0pt}
+\setlength{\cftaftertoctitleskip}{6pt}
+\setlength{\cftbeforesecskip}{2pt}
+\setlength{\cftbeforesubsecskip}{0pt}
+\renewcommand{\cftsecfont}{\footnotesize}
+\renewcommand{\cftsubsecfont}{\footnotesize}
+\renewcommand{\cftsecpagefont}{\footnotesize}
+\renewcommand{\cftsubsecpagefont}{\footnotesize}
+\renewcommand{\cfttoctitlefont}{\Large\bfseries}
+
+% ── tcolorbox styles ──
+\tcbuselibrary{skins, breakable}
+\tcbset{
+    archbox/.style={
+        enhanced,
+        colback=nodebox,
+        colframe=sectionblue,
+        fonttitle=\bfseries\color{titleblue},
+        boxrule=0.8pt,
+        arc=4pt,
+        left=8pt, right=8pt, top=6pt, bottom=6pt
+    },
+    keybox/.style={
+        enhanced,
+        colback=successbox,
+        colframe=nodegreen,
+        fonttitle=\bfseries\color{nodegreen},
+        boxrule=0.8pt,
+        arc=4pt,
+        left=8pt, right=8pt, top=6pt, bottom=6pt
+    }
+}
+
+% ────────────────────────────────────────────────────────
+\begin{document}
+
+% ── Title Page ──
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+
+    {\Huge\bfseries\color{titleblue}
+        Agentic Credit Risk\\[0.3em]
+        Intelligence Engine\\[1.5em]
+    }
+
+    {\Large Milestone 2 Project Report\\[2em]}
+
+    {\large\itshape
+        Retrieval-Augmented Generation, LangGraph Orchestration,\\
+        and LLM-Powered Risk Reporting\\[3em]
+    }
+
+    {\Large\bfseries Team PowerPuff Boys\\[2em]}
+
+    \vfill
+    {\large April 2026}
+
+\end{titlepage}
+
+% ── Table of Contents ──
+\setcounter{tocdepth}{2}
+{\footnotesize\tableofcontents}
+\newpage
+
+% ────────────────────────────────────────────────────────
+\section{Abstract}
+
+This report presents the second milestone of the Intelligent Credit Risk Scoring Engine --- an agentic AI system built on top of the Phase~1 machine learning pipeline. Phase~2 extends the system from a static risk classifier into a fully autonomous, reasoning-capable credit risk assistant.
+
+The architecture connects three sequential AI agents orchestrated by LangGraph: a LightGBM+SMOTE classifier that assigns a risk tier, a Retrieval-Augmented Generation (RAG) module that fetches relevant regulatory guidelines from a curated knowledge base, and a Groq-hosted large language model that synthesizes all signals into a structured, human-readable risk assessment report.
+
+The Phase~1 model was upgraded from HistGradientBoosting to \textbf{LightGBM with SMOTE oversampling}, achieving \textbf{80.41\% accuracy} and a Macro F1 of \textbf{0.71} across \textbf{100 features} on a 10,268-sample test set. The RAG knowledge base contains \textbf{2,931 document chunks} drawn from three official regulatory documents totalling 514 pages. The final system delivers end-to-end risk intelligence --- from raw bureau data to a grounded, explainable JSON report --- in approximately \textbf{10 seconds}.
+
+% ────────────────────────────────────────────────────────
+\section{Introduction}
+
+Credit risk classification alone answers only one question: \textit{How risky is this borrower?} What it does not answer is equally important: \textit{Why? What should the bank do? What does regulation say?}
+
+Phase~1 of this project built a strong behavioral classifier using classical machine learning. It accurately predicted borrower risk tiers from CIBIL bureau data, excluding the Credit Score to ensure genuine behavioral learning rather than score replication.
+
+Phase~2 goes further. It transforms the system into an \textbf{agentic AI pipeline} --- one that not only classifies risk but also retrieves relevant lending guidelines, reasons over them, and produces a structured advisory report grounded in real regulatory documents. The system is designed to support credit officers with explainable, document-backed decision intelligence rather than a simple label.
+
+The three core capabilities added in Phase~2 are:
+
+\begin{itemize}[nosep]
+    \item \textbf{Agentic orchestration} via LangGraph, connecting ML inference and AI reasoning in a stateful, fault-tolerant workflow
+    \item \textbf{Retrieval-Augmented Generation (RAG)} using ChromaDB and semantic embeddings to fetch relevant regulatory context
+    \item \textbf{LLM-powered report generation} via Groq (\texttt{llama-3.3-70b-versatile}) with strict JSON schema enforcement
+\end{itemize}
+
+% ────────────────────────────────────────────────────────
+\section{Phase 1 Recap --- The ML Foundation}
+
+Phase~1 delivered a behavioral credit risk classifier trained on 51,336 records merged from an internal bank dataset and external CIBIL bureau data. The key results are summarised below.
+
+\begin{table}[h!]
+    \centering
+    \begin{tabular}{@{} l l @{}}
+        \toprule
+        \textbf{Aspect} & \textbf{Detail} \\
+        \midrule
+        Dataset size       & 51,336 records, 87 raw features \\
+        Target variable    & \texttt{Approved\_Flag} --- four risk tiers (P1--P4) \\
+        Final model        & HistGradientBoosting with cost-sensitive weighting \\
+        Accuracy           & 78\% \\
+        Macro F1-Score     & 0.73 \\
+        P3 (Medium) Recall & 0.65 \\
+        Deployment         & Streamlit web interface with real-time prediction \\
+        \bottomrule
+    \end{tabular}
+    \caption{Phase 1 summary of key results.}
+    \label{tab:phase1_summary}
+\end{table}
+
+The deliberate exclusion of \texttt{Credit\_Score} was maintained throughout --- the system learns from raw behavioral signals such as enquiry frequency, delinquency history, account age, and payment patterns rather than a derived bureau score. Phase~2 inherits this foundation entirely, reusing the preprocessing pipeline, feature engineering logic, and trained model artifact without modification.
+
+% ────────────────────────────────────────────────────────
+\section{Phase 2 Overview --- The Agentic Layer}
+
+Phase~2 wraps the Phase~1 model inside a three-node LangGraph workflow. Each node has a single, well-defined responsibility. They execute sequentially, passing a shared typed state object from one to the next.
+
+\begin{tcolorbox}[archbox, title={LangGraph Workflow --- End-to-End Flow}]
+\begin{center}
+\begin{tabular}{c}
+    \textbf{Raw Bureau Features (from UI)}\\[0.4em]
+    $\downarrow$\\[0.4em]
+    \textbf{Node 1: Risk Analyzer}\\
+    \small LightGBM + SMOTE model $\;\cdot\;$ Risk tier, probabilities, top features\\[0.4em]
+    $\downarrow$\\[0.4em]
+    \textbf{Node 2: Guideline Retriever}\\
+    \small ChromaDB + all-MiniLM-L6-v2 $\;\cdot\;$ 4 most relevant regulatory chunks\\[0.4em]
+    $\downarrow$\\[0.4em]
+    \textbf{Node 3: Report Generator}\\
+    \small Groq llama-3.3-70b-versatile $\;\cdot\;$ Structured JSON risk assessment report\\[0.4em]
+    $\downarrow$\\[0.4em]
+    \textbf{Final Report (JSON) --- displayed in Streamlit UI}
+\end{tabular}
+\end{center}
+\end{tcolorbox}
+
+\vspace{0.8em}
+
+The state object is defined as a typed Python dictionary (\texttt{TypedDict}) and carries all information between nodes. If any node encounters an error, it sets an error flag and subsequent nodes skip gracefully, preventing silent failures.
+
+\subsection{State Schema}
+
+\begin{table}[h!]
+    \centering
+    \begin{tabular}{@{} l l p{7cm} @{}}
+        \toprule
+        \textbf{Field} & \textbf{Type} & \textbf{Purpose} \\
+        \midrule
+        \texttt{prospect\_id}      & string & Unique identifier for the borrower \\
+        \texttt{features}          & dict   & Raw bureau features from the UI \\
+        \texttt{risk\_tier}        & string & P1 / P2 / P3 / P4 assigned by Node 1 \\
+        \texttt{probabilities}     & dict   & Class probability scores for all four tiers \\
+        \texttt{top\_risk\_factors}& list   & Top 5 features by model importance with values \\
+        \texttt{retrieved\_chunks} & list   & RAG results from ChromaDB \\
+        \texttt{report}            & dict   & Final structured JSON report from the LLM \\
+        \texttt{error}             & string & Error message if any node fails \\
+        \bottomrule
+    \end{tabular}
+    \caption{LangGraph agent state schema.}
+    \label{tab:state_schema}
+\end{table}
+
+% ────────────────────────────────────────────────────────
+\section{Node 1 --- Risk Analyzer}
+
+The Risk Analyzer is the entry point of the LangGraph workflow. It receives raw bureau features from the Streamlit UI and produces a complete risk classification.
+
+\subsection{Preprocessing Pipeline}
+
+The preprocessing logic exactly mirrors the training pipeline to prevent any train-serve skew. The steps are applied in the following order:
+
+\begin{enumerate}[nosep]
+    \item \textbf{Sentinel replacement} --- Values of $-99999$ (used as missing indicators in the original dataset) are replaced with \texttt{NaN}.
+    \item \textbf{Column dropping} --- Leakage and identifier columns (\texttt{Credit\_Score}, \texttt{CC\_utilization}, \texttt{PL\_utilization}, \texttt{PROSPECT\_ID}) are removed.
+    \item \textbf{Delinquency imputation} --- Null values in six delinquency fields are filled with 0, representing no recorded delinquency event.
+    \item \textbf{Numeric imputation} --- All remaining numeric nulls are filled with 0.
+    \item \textbf{Feature engineering} --- Five composite behavioral features are computed (described in Section~\ref{subsec:features}).
+    \item \textbf{Categorical encoding} --- One-hot encoding with \texttt{drop\_first=True} is applied to five categorical variables.
+    \item \textbf{Column alignment} --- The dataframe is reindexed to exactly match the 100 training columns; any column missing from the input is filled with 0.
+\end{enumerate}
+
+\subsection{Engineered Features}
+\label{subsec:features}
+
+Five composite behavioral features are computed at inference time, identical to those computed during training:
+
+\begin{table}[h!]
+    \centering
+    \small
+    \renewcommand{\arraystretch}{1.7}
+    \begin{tabular}{@{} p{3.2cm} p{6.0cm} p{5.0cm} @{}}
+        \toprule
+        \textbf{Feature} & \textbf{Formula} & \textbf{What It Captures} \\
+        \midrule
+        \texttt{delinq\_burden}
+            & $D_{\mathrm{count}} \;\times\; D_{\mathrm{level}}$
+            & Severity-weighted delinquency load \\
+        \texttt{enq\_pressure}
+            & $E_{3m} \;/\; (E_{12m} + 1)$
+            & Recency ratio of credit enquiries \\
+        \texttt{account\_health}
+            & $N_{\mathrm{std}} \;/\; (N_{\mathrm{sub}} + N_{\mathrm{dbt}} + N_{\mathrm{lss}} + 1)$
+            & Ratio of standard to distressed accounts \\
+        \texttt{income\_stability}
+            & $\mathrm{Income} \;\times\; \ln(1 + T_{\mathrm{employ}})$
+            & Income weighted by employment tenure \\
+        \texttt{recency\_risk}
+            & $1 \;/\; (T_{\mathrm{deliq}} + 1)$
+            & Inverse decay of delinquency recency \\
+        \bottomrule
+    \end{tabular}
+    \vspace{0.3em}
+    {\footnotesize\textit{Variables: $D$ = delinquency counts/level, $E$ = enquiry frequency (3m/12m), $N$ = account status counts, $T$ = time variables. All names match training pipeline features.}}
+    \caption{Engineered behavioral features computed at inference.}
+    \label{tab:features}
+\end{table}
+
+\subsection{Model Inference}
+
+The node loads the frozen LightGBM model from \texttt{models/finalized\_model.joblib} and the corresponding 100-column feature list from \texttt{models/feature\_columns.joblib} --- both serialised using \texttt{joblib}. Inference is performed through the \texttt{Booster.predict()} API, the lowest-level stable interface in LightGBM, which avoids operating-system-specific thread conflicts.
+
+The node outputs three values into the shared state:
+\begin{itemize}[nosep]
+    \item \textbf{Risk tier} (P1/P2/P3/P4) derived from \texttt{argmax} of class probabilities
+    \item \textbf{Class probabilities} for all four tiers, retained as the authoritative confidence block
+    \item \textbf{Top 5 risk factors} by feature importance with their actual input values, formatted as human-readable strings for the LLM prompt
+\end{itemize}
+
+% ────────────────────────────────────────────────────────
+\section{Node 2 --- Guideline Retriever (RAG)}
+
+The Guideline Retriever fetches regulatory context that is semantically relevant to the borrower's specific risk profile. It constructs a natural-language query from the risk tier and top risk factors, embeds it, and searches the ChromaDB vector store.
+
+\subsection{Query Construction}
+
+The query combines the risk tier and the top three risk factors into a single string. For example, a P3-tier borrower with high enquiry pressure and recent delinquency would produce a query similar to:
+
+\begin{tcolorbox}[archbox, breakable]
+{\small\ttfamily
+credit risk P3 borrower lending guidelines\\[2pt]
+enq\_pressure = 0.43\ (importance: 0.089)\\[2pt]
+time\_since\_recent\_delinquency = 2\ (importance: 0.071)\\[2pt]
+num\_std\_12mts = 3\ (importance: 0.065)
+}
+\end{tcolorbox}
+
+\subsection{Embedding and Retrieval}
+
+The retriever uses \texttt{all-MiniLM-L6-v2} from the SentenceTransformers library --- a lightweight BERT-based model producing 384-dimensional sentence embeddings, optimised for semantic similarity tasks. The query is embedded locally with no external API call, then compared against stored document chunk embeddings using \textbf{cosine similarity}.
+
+ChromaDB is configured with cosine distance (\texttt{hnsw:space: cosine}) and returns the \textbf{4 most relevant chunks} along with their source document names and similarity distance scores.
+
+\begin{tcolorbox}[challengebox, title={Implementation Note: ChromaDB Embedding Bug}]
+ChromaDB 1.5.8's built-in \texttt{SentenceTransformerEmbeddingFunction} wrapper contains a threading bug that causes \texttt{collection.query(query\_texts=...)} to hang indefinitely when invoked inside a LangGraph node. This was resolved by embedding the query directly with the raw \texttt{SentenceTransformer} model and using \texttt{query\_embeddings=...} instead, bypassing the wrapper entirely. End-to-end pipeline time dropped from infinite to approximately 8--10 seconds after this fix.
+\end{tcolorbox}
+
+\subsection{Output Format}
+
+Each retrieved chunk is passed to Node~3 as a structured object containing:
+\begin{itemize}[nosep]
+    \item The chunk text (up to 500 characters)
+    \item The source document name
+    \item The cosine distance score (lower = more similar)
+\end{itemize}
+
+% ────────────────────────────────────────────────────────
+\section{Node 3 --- Report Generator}
+
+The Report Generator is the final node. It receives the risk classification, class probabilities, top risk factors, and retrieved regulatory chunks, then calls the Groq API to generate a structured, grounded risk assessment report.
+
+\subsection{Prompt Design}
+
+The system prompt establishes the LLM's role as a bank credit risk analyst and enforces four strict rules:
+\begin{enumerate}[nosep]
+    \item Only use facts from the provided guidelines --- no invented statistics or regulations.
+    \item If guidelines do not cover a point, explicitly state ``Insufficient guideline context.''
+    \item Respond only with a valid JSON object --- no markdown, no preamble.
+    \item All string values must be factual and concise.
+\end{enumerate}
+
+The user message supplies: the prospect ID, risk tier, model probabilities, top risk factors, and the full text of all four retrieved guideline chunks.
+
+\subsection{Output JSON Schema}
+
+The LLM is required to respond in the following fixed schema:
+
+\begin{table}[h!]
+    \centering
+    \small
+    \renewcommand{\arraystretch}{1.4}
+    \begin{tabularx}{\textwidth}{@{} l l X @{}}
+        \toprule
+        \textbf{Section} & \textbf{Field} & \textbf{Description} \\
+        \midrule
+        \multirow{5}{*}{\texttt{summary}}
+            & \texttt{prospect\_id}   & Unique borrower identifier \\
+            & \texttt{risk\_tier}     & Assigned tier: P1, P2, P3, or P4 \\
+            & \texttt{severity}       & Human label: Very Low / Low / Medium / High \\
+            & \texttt{recommendation} & One-sentence lending action for the credit officer \\
+            & \texttt{overview}       & 2--3 sentence narrative of the borrower's risk profile \\
+        \midrule
+        \multirow{4}{*}{\texttt{deep\_dive}}
+            & \texttt{top\_risk\_factors}    & Top 3 features driving the risk tier \\
+            & \texttt{factor\_explanations}  & Plain-language explanation for each factor \\
+            & \texttt{guideline\_references} & Direct quotes or paraphrases from retrieved regulations \\
+            & \texttt{suggested\_actions}    & Three concrete actions recommended for the credit team \\
+        \midrule
+        \texttt{confidence}
+            & \texttt{P1, P2, P3, P4} & Class probabilities from the LightGBM model (not the LLM) \\
+        \bottomrule
+    \end{tabularx}
+    \caption{Output JSON report schema produced by Node 3.}
+    \label{tab:json_schema}
+\end{table}
+
+\begin{tcolorbox}[keybox, title={Critical Design Decision: Probability Integrity}]
+After the LLM response is parsed, the \texttt{confidence} block is \textbf{overwritten} with the ML model's actual probabilities --- the LLM's confidence values are discarded entirely. Probability scores must come from the calibrated LightGBM model, not from an LLM's self-reported certainty.
+\end{tcolorbox}
+
+\subsection{LLM Configuration}
+
+\begin{table}[h!]
+    \centering
+    \begin{tabular}{@{} l l p{6.5cm} @{}}
+        \toprule
+        \textbf{Parameter} & \textbf{Value} & \textbf{Reason} \\
+        \midrule
+        Model       & \texttt{llama-3.3-70b-versatile} & Strong instruction-following, fast via Groq \\
+        Temperature & 0.1              & Near-deterministic output for consistent reports \\
+        Max tokens  & 1,200            & Sufficient for the full JSON report schema \\
+        Provider    & Groq API         & Sub-second inference latency \\
+        \bottomrule
+    \end{tabular}
+    \caption{LLM configuration parameters.}
+    \label{tab:llm_config}
+\end{table}
+
+% ────────────────────────────────────────────────────────
+\section{Knowledge Base Construction}
+
+The RAG knowledge base is built offline by \texttt{ingest.py} and stored in a persistent ChromaDB directory (\texttt{chroma\_db/}). It only needs to be rebuilt if the source documents change.
+
+\subsection{Source Documents}
+
+Three official regulatory documents were selected as the knowledge base:
+
+\begin{table}[h!]
+    \centering
+    \small
+    \renewcommand{\arraystretch}{1.5}
+    \begin{tabularx}{\textwidth}{@{} X c c X @{}}
+        \toprule
+        \textbf{Document} & \textbf{Source} & \textbf{Pages} & \textbf{Primary Coverage} \\
+        \midrule
+        RBI Master Circular --- Basel III Capital Regulations
+            & RBI & 328
+            & Capital adequacy, risk-weighted assets, credit exposure limits \\
+        IRACP Norms --- Income Recognition, Asset Classification and Provisioning
+            & RBI & 77
+            & NPA classification, provisioning requirements, restructuring guidelines \\
+        SEBI Master Circular --- Credit Rating Agencies
+            & SEBI & 109
+            & Rating methodology, disclosure obligations, monitoring requirements \\
+        \midrule
+        \textbf{Total} & & \textbf{514} & \\
+        \bottomrule
+    \end{tabularx}
+    \caption{Regulatory documents in the RAG knowledge base.}
+    \label{tab:rag_docs}
+\end{table}
+
+\subsection{Chunking Strategy}
+
+Each document is split into overlapping text chunks using a sliding window approach:
+
+\begin{table}[h!]
+    \centering
+    \begin{tabular}{@{} l r @{}}
+        \toprule
+        \textbf{Parameter} & \textbf{Value} \\
+        \midrule
+        Chunk size              & 500 characters \\
+        Overlap                 & 100 characters \\
+        Minimum chunk length    & 50 characters (shorter chunks discarded) \\
+        Total chunks ingested   & \textbf{2,931} \\
+        \bottomrule
+    \end{tabular}
+    \caption{Chunking parameters for the RAG knowledge base.}
+    \label{tab:chunking}
+\end{table}
+
+Overlap ensures that sentences spanning chunk boundaries are not lost, improving retrieval quality for regulatory phrases that fall near chunk edges.
+
+\subsection{Embedding and Storage}
+
+All chunks are embedded in a single batch pass using \texttt{all-MiniLM-L6-v2} with \texttt{batch\_size=64} and stored in ChromaDB with pre-computed embeddings. At query time, only the search query needs to be embedded --- document embeddings are retrieved from disk. ChromaDB uses the HNSW (Hierarchical Navigable Small World) index with cosine distance for fast approximate nearest-neighbour search.
+
+% ────────────────────────────────────────────────────────
+\section{LightGBM Upgrade from Phase 1}
+
+Phase~1 used HistGradientBoosting as the final model. For Phase~2, the model was upgraded to \textbf{LightGBM with SMOTE oversampling}, achieving a measurable improvement in accuracy.
+
+\subsection{Why SMOTE}
+
+The dataset has a severe class imbalance: P2 (Low Risk) accounts for 62.7\% of records, while P1, P3, and P4 together comprise only 37.3\%. Phase~1 addressed this with cost-sensitive weighting. Phase~2 uses \textbf{SMOTE} (Synthetic Minority Oversampling Technique) to synthetically generate additional minority-class samples before training, creating a more balanced training distribution and enabling the model to learn stronger decision boundaries for underrepresented classes.
+
+\subsection{Model Comparison}
+
+\begin{table}[h!]
+    \centering
+    \small
+    \begin{tabular}{@{} l l r r r @{}}
+        \toprule
+        \textbf{Model} & \textbf{Approach} & \textbf{Accuracy} & \textbf{Macro F1} & \textbf{P3 Recall} \\
+        \midrule
+        Decision Tree             & Baseline (\texttt{max\_depth=5})    & 77.4\%          & 0.67 & 0.30 \\
+        Random Forest             & GridSearchCV tuning                 & 78.4\%          & 0.71 & 0.41 \\
+        \textbf{LightGBM + SMOTE} & \textbf{SMOTE + gradient boosting}  & \textbf{80.4\%} & \textbf{0.71} & \textbf{0.32} \\
+        \bottomrule
+    \end{tabular}
+    \caption{Model comparison across all experiments evaluated in the project.}
+    \label{tab:model_comparison}
+\end{table}
+
+LightGBM with SMOTE achieves the highest accuracy at \textbf{80.4\%} with a Macro F1 of \textbf{0.71}, outperforming both the Decision Tree and Random Forest baselines. The improvement is driven by SMOTE's synthetic oversampling of minority classes and LightGBM's efficient gradient boosting over 500 estimators.
+
+% ────────────────────────────────────────────────────────
+\section{Deployment --- Streamlit Phase 2 UI}
+
+The Phase~2 interface (\texttt{agent\_app.py}) is a complete rebuild of the Phase~1 Streamlit application, extended to expose the full agentic pipeline and its results.
+
+\subsection{Interface Structure}
+
+\textbf{Sidebar}
+\begin{itemize}[nosep]
+    \item Prospect selector --- browse or randomise from the CIBIL unseen dataset
+    \item Quick actions --- Random prospect, Clear results buttons
+    \item Team branding and model statistics
+\end{itemize}
+
+\textbf{Risk Analysis Tab}
+\begin{itemize}[nosep]
+    \item Prospect overview cards --- gender, marital status, education, monthly income
+    \item Bureau data inputs across three sub-tabs: enquiry and trade line data, delinquency and payment history, and demographics
+    \item \textbf{Run Agentic Analysis} button --- triggers the full LangGraph pipeline
+    \item Risk tier card (color-coded: green for P1, amber for P2, orange for P3, red for P4)
+    \item Risk overview and bank recommendation from the LLM
+    \item Probability breakdown: four metric cards and animated bar charts for all tiers
+    \item Deep dive panel: top risk factors with explanations, suggested actions, and guideline references
+    \item Retrieved knowledge base chunks (expandable)
+    \item Raw JSON report (expandable)
+\end{itemize}
+
+\textbf{System Architecture Tab}
+\begin{itemize}[nosep]
+    \item Annotated description of all three LangGraph nodes
+    \item Full technology stack summary
+    \item RAG knowledge base statistics
+\end{itemize}
+
+\subsection{Key Technical Decisions}
+
+\textbf{Lazy model loading} --- Heavy models (LightGBM, SentenceTransformers, ChromaDB) are loaded on first use rather than at startup, keeping the UI immediately responsive and only paying the initialisation cost when the user requests an analysis.
+
+\textbf{API key isolation} --- The Groq API key is loaded exclusively from a \texttt{.env} file using \texttt{python-dotenv} and is never exposed in the UI. If the key is missing, the application surfaces a clear error rather than failing silently.
+
+\textbf{Cached resource management} --- The CIBIL dataset is loaded once using \texttt{@st.cache\_data} and the agent runner is initialised once using \texttt{@st.cache\_resource}, preventing redundant disk reads and model loads across Streamlit reruns.
+
+% ────────────────────────────────────────────────────────
+\section{Tools and Technologies}
+
+\begin{table}[h!]
+    \centering
+    \renewcommand{\arraystretch}{1.2}
+    \begin{tabular}{@{} l l p{7cm} @{}}
+        \toprule
+        \textbf{Category} & \textbf{Tool} & \textbf{Purpose} \\
+        \midrule
+        Language               & Python                    & Primary runtime \\
+        ML Model               & LightGBM                  & Risk classification \\
+        Class Balancing        & imbalanced-learn          & SMOTE oversampling \\
+        Data Processing        & pandas, NumPy             & Feature engineering \\
+        Workflow Orchestration & LangGraph                 & Agentic node graph \\
+        LLM Provider           & Groq API                  & Fast LLM inference \\
+        LLM Model              & llama-3.3-70b-versatile   & Report generation \\
+        Embeddings             & sentence-transformers      & Semantic query embedding \\
+        Embedding Model        & all-MiniLM-L6-v2          & 384-dim sentence vectors \\
+        Vector Database        & ChromaDB                  & Chunk storage and retrieval \\
+        PDF Ingestion          & pypdf                     & Regulatory document parsing \\
+        UI                     & Streamlit                 & Interactive web interface \\
+        Model Persistence      & joblib                    & Frozen model artifact loading \\
+        Environment Config     & python-dotenv             & Secure API key management \\
+        Version Control        & Git, GitHub               & Source control \\
+        Development            & Jupyter Notebook          & Experimentation and training \\
+        \bottomrule
+    \end{tabular}
+    \caption{Tools and technologies used in Phase 2.}
+    \label{tab:tools}
+\end{table}
+
+% ────────────────────────────────────────────────────────
+\section{Results}
+
+\subsection{Model Performance}
+
+\begin{table}[h!]
+    \centering
+    \begin{tabular}{@{} l r @{}}
+        \toprule
+        \textbf{Metric} & \textbf{Value} \\
+        \midrule
+        Overall Accuracy       & \textbf{80.41\%} \\
+        Macro F1-Score         & \textbf{0.71} \\
+        Weighted Precision     & 0.79 \\
+        Weighted Recall        & 0.80 \\
+        Test Set Size          & 10,268 samples \\
+        Training Features      & 100 \\
+        Estimators             & 500 \\
+        Balancing Strategy     & SMOTE \\
+        Model Type             & LightGBM (LGBMClassifier) \\
+        \bottomrule
+    \end{tabular}
+    \caption{Phase 2 LightGBM + SMOTE model performance on the test set.}
+    \label{tab:model_perf}
+\end{table}
+
+\subsection{Pipeline Performance}
+
+\begin{table}[h!]
+    \centering
+    \begin{tabular}{@{} l l r @{}}
+        \toprule
+        \textbf{Stage} & \textbf{Description} & \textbf{Typical Duration} \\
+        \midrule
+        Node 1 --- Risk Analyzer       & Preprocessing + LightGBM inference    & $<$ 1 second \\
+        Node 2 --- Guideline Retriever & Query embedding + ChromaDB search      & 1--3 seconds \\
+        Node 3 --- Report Generator    & Groq API call + JSON parsing           & 4--7 seconds \\
+        \midrule
+        \textbf{Total end-to-end}      &                                       & \textbf{$\sim$8--10 seconds} \\
+        \bottomrule
+    \end{tabular}
+    \caption{End-to-end pipeline timing breakdown.}
+    \label{tab:pipeline_timing}
+\end{table}
+
+\subsection{Knowledge Base Coverage}
+
+\begin{table}[h!]
+    \centering
+    \begin{tabular}{@{} l r r @{}}
+        \toprule
+        \textbf{Document} & \textbf{Chunks} & \textbf{Avg.\ Chunk Length} \\
+        \midrule
+        RBI Basel III Capital Regulations           & $\approx$1,870 & $\sim$480 chars \\
+        IRACP Norms                                 & $\approx$440   & $\sim$480 chars \\
+        SEBI Credit Rating Agencies Circular        & $\approx$621   & $\sim$480 chars \\
+        \midrule
+        \textbf{Total}                              & \textbf{2,931} & \\
+        \bottomrule
+    \end{tabular}
+    \caption{Knowledge base chunk distribution by source document.}
+    \label{tab:kb_coverage}
+\end{table}
+
+% ────────────────────────────────────────────────────────
+\section{Conclusion}
+
+Phase~2 of the Intelligent Credit Risk Scoring Engine successfully transforms a static ML classifier into a fully agentic AI system capable of end-to-end credit risk intelligence.
+
+\subsection{Key Achievements}
+
+\begin{itemize}[nosep]
+    \item \textbf{Agentic workflow} --- A three-node LangGraph pipeline connects machine learning, vector search, and large language model reasoning in a stateful, fault-tolerant graph.
+    \item \textbf{Model upgrade} --- LightGBM + SMOTE achieves 80.4\% accuracy, a 2.4-point improvement over Phase~1.
+    \item \textbf{Grounded recommendations} --- All LLM outputs are constrained to retrieved regulatory guidelines, preventing hallucination and ensuring compliance-safe advisory content.
+    \item \textbf{Probability integrity} --- Model probability scores are injected directly into the final report; the LLM's own confidence is always discarded.
+    \item \textbf{2,931 regulatory chunks} --- RBI and SEBI regulatory content covering capital adequacy, NPA classification, and credit rating obligations is available for retrieval.
+    \item \textbf{Production hardening} --- Apple Silicon segfault, ChromaDB hang, and tokenizer deadlock issues were all diagnosed and resolved, making the system portable across macOS environments.
+\end{itemize}
+
+\subsection{Design Principles}
+
+The system was built around three principles that distinguish it from a simple LLM wrapper:
+
+\begin{enumerate}
+    \item \textbf{The ML model decides risk.} The LLM has no influence over the risk tier or probability scores. It only explains and advises based on what the model outputs.
+    \item \textbf{The knowledge base constrains advice.} Recommendations are grounded in retrieved regulatory documents, not the LLM's parametric knowledge, making outputs auditable and traceable.
+    \item \textbf{Failures are explicit.} Every node propagates errors through the shared state object, making failures visible and debuggable in the UI rather than silently swallowed.
+\end{enumerate}
+
+\subsection{Future Directions}
+
+\begin{itemize}[nosep]
+    \item \textbf{Feedback loop} --- Capture analyst overrides to fine-tune the classifier on real-world credit decisions over time.
+    \item \textbf{Multi-document reasoning} --- Allow the LLM to synthesize relationships across all retrieved chunks rather than treating them as independent references.
+    \item \textbf{Explainability layer} --- Integrate SHAP value computation per prospect for regulatory-grade model explainability reports.
+    \item \textbf{Streaming output} --- Stream the LLM report token-by-token for a more responsive and interactive UI experience.
+\end{itemize}
+
+\vspace{2em}
+\noindent\rule{\textwidth}{0.4pt}
+\begin{center}
+\small\textit{Report prepared by Team PowerPuff Boys --- Agentic Credit Risk Classification, April 2026}\\
+\small\textit{LightGBM + SMOTE $\;\cdot\;$ LangGraph $\;\cdot\;$ ChromaDB $\;\cdot\;$ Groq llama-3.3-70b-versatile $\;\cdot\;$ Streamlit}
+\end{center}
+
+% ────────────────────────────────────────────────────────
+\end{document}

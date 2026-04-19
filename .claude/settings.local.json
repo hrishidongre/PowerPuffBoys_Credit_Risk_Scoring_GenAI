@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c ':*)",
+      "Bash(python3:*)",
+      "Bash(.venv/bin/python -c ':*)",
+      "Bash(.venv/bin/pip install:*)",
+      "Bash(pip install:*)",
+      "Bash(.venv/bin/pip show:*)",
+      "Bash(pip show:*)",
+      "Bash(\"/Users/vetri/Downloads/Personal_Project/PowerPuffBoys_Credit_Risk_Scoring_GenAI/.venv/bin/python3\" -c \"import pkg_resources; [print\\(p.project_name, p.version\\) for p in pkg_resources.working_set]\")",
+      "Bash(\"/Users/vetri/Downloads/Personal_Project/PowerPuffBoys_Credit_Risk_Scoring_GenAI/.venv/bin/pip\" install:*)",
+      "Bash(\"/Users/vetri/Downloads/Personal_Project/PowerPuffBoys_Credit_Risk_Scoring_GenAI/.venv/bin/python3\" -m pip install streamlit -q)",
+      "Bash(\"/Users/vetri/Downloads/Personal_Project/PowerPuffBoys_Credit_Risk_Scoring_GenAI/.venv/bin/python3\" -m py_compile \"/Users/vetri/Downloads/Personal_Project/PowerPuffBoys_Credit_Risk_Scoring_GenAI/app.py\")",
+      "Bash(\".venv/bin/python3\" -m streamlit run app.py --server.headless false)",
+      "Bash(.venv/bin/python3:*)",
+      "Bash(kill 84626 84586 84584)",
+      "Bash(grep -v \"^Warning\\\\|Loading\\\\|BertModel\\\\|Key \\\\|-\\\\+\\\\|embed\\\\|Notes\\\\|UNEXPECTED\\\\|ok if\\\\|^$\")",
+      "Bash(kill -9 86474 82004 87519 87482 87480 86538)",
+      "Bash(kill -9 88455 88417 88415)",
+      "Bash(git rm:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git rebase:*)",
+      "Bash(xargs -I{} git cat-file -p {})",
+      "Bash(ls:*)",
+      "Bash(brew install:*)",
+      "Bash(pdflatex -interaction=nonstopmode Phase2_Agentic_Credit_Risk_Report.tex)",
+      "Read(//Library/TeX/texbin/**)",
+      "Read(//usr/local/**)"
+    ]
+  }
+}
